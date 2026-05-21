@@ -20,7 +20,7 @@ const SUBJECTS = [
     icon: Calculator,
     freeTitle: "Maths Free Assessment",
     packs: [
-      {
+            {
         id: "maths-pack-1",
         title: "MATHS PACK 1",
         price: 100000,
@@ -49,7 +49,7 @@ const SUBJECTS = [
     icon: Brain,
     freeTitle: "Reasoning Free Assessment",
     packs: [
-      {
+            {
         id: "reasoning-pack-1",
         title: "REASONING PACK 1",
         price: 200000,
@@ -78,7 +78,7 @@ const SUBJECTS = [
     icon: BookOpen,
     freeTitle: "Reading Skills Free Assessment",
     packs: [
-      {
+            {
         id: "reading-pack-1",
         title: "READING FOUNDATIONS PACK",
         price: 300000,
@@ -114,7 +114,6 @@ export default function CoursesPage() {
     setToastMessage(`${pack.title} added to cart.`);
     window.setTimeout(() => setToastMessage(""), 2800);
   };
-
   const renderSubject = (subjectData: typeof SUBJECTS[0]) => {
     if (filter !== "All" && filter !== "Free" && filter !== subjectData.id) return null;
 
