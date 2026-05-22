@@ -5,6 +5,10 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import InitialLoader from "@/components/InitialLoader";
 import { ThemeProvider } from "@/components/ThemeProvider";
+<<<<<<< HEAD
+=======
+import { CartProvider } from "@/components/CartContext";
+>>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
 import "./globals.css";
 
 const inter = Inter({
@@ -31,6 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${fraunces.variable} ${inter.variable}`}>
+<<<<<<< HEAD
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -69,6 +74,24 @@ export default function RootLayout({
           </main>
           <Footer />
         </ThemeProvider>
+=======
+      <body className="font-inter antialiased min-h-screen flex flex-col">
+        <CartProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            <InitialLoader />
+            <Navigation />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </ThemeProvider>
+        </CartProvider>
+>>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
       </body>
     </html>
   );

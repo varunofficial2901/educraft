@@ -31,7 +31,11 @@ export default function Footer() {
               <Link href="/courses" className="hover:text-[#6366F1] transition-colors">Test Series</Link>
               <Link href="/courses?filter=FREE" className="hover:text-[#6366F1] transition-colors">Free Practice Test</Link>
               <Link href="/#how-it-works" className="hover:text-[#6366F1] transition-colors">How It Works</Link>
+<<<<<<< HEAD
               <Link href="/#about" className="hover:text-[#6366F1] transition-colors">About Us</Link>
+=======
+              <Link href="/about-us" className="hover:text-[#6366F1] transition-colors">About Us</Link>
+>>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
             </div>
           </div>
 
