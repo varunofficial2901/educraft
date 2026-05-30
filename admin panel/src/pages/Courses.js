@@ -103,7 +103,7 @@ export default function Courses({ onSelectCourse }) {
   const load = () => {
     setLoading(true);
     coursesAPI.getAll()
-      .then(res => setCourses(res.data.data))
+      .then(res => setCourses(res.data.data || res.data || []))
       .catch(() => toast('Failed to load courses', 'danger'))
       .finally(() => setLoading(false));
   };

@@ -203,3 +203,154 @@ async def delete_course(
         raise HTTPException(status_code=404, detail="Course not found")
 
     return MessageResponse(message="Course deleted successfully")
+# ─────────────────────────────────────────
+# ─────────────────────────────────────────
+# PUBLIC: Get admin_courses for website
+# ─────────────────────────────────────────
+
+@router.get("/public/all", tags=["Public"])
+async def public_list_courses(db=Depends(get_database)):
+    courses = await db["admin_courses"].find({"status": "active"}).sort("created_at", -1).to_list(100)
+    result = []
+    for c in courses:
+        free_count = await db["admin_papers"].count_documents({"course_id": str(c["_id"]), "type": "free", "visible": True})
+        paid_count = await db["admin_papers"].count_documents({"course_id": str(c["_id"]), "type": "paid", "visible": True})
+        result.append({
+            "_id": str(c["_id"]),
+            "title": c.get("title", ""),
+            "description": c.get("description", ""),
+            "color": c.get("color", "#6366F1"),
+            "price": c.get("price", 0),
+            "freeTestCount": free_count,
+            "paidTestCount": paid_count,
+        })
+    return {"data": result}
+
+
+@router.get("/public/{course_id}/tests", tags=["Public"])
+async def public_get_tests(course_id: str, db=Depends(get_database)):
+    if not ObjectId.is_valid(course_id):
+        raise HTTPException(status_code=400, detail="Invalid course ID")
+
+    course = await db["admin_courses"].find_one({"_id": ObjectId(course_id)})
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    free_tests = await db["admin_tests"].find({
+        "course_id": course_id, "is_free": True
+    }).to_list(100)
+
+    bundles = await db["admin_bundles"].find({
+        "course_id": course_id, "visible": True
+    }).to_list(100)
+
+    return {
+        "data": {
+            "course": {
+                "_id": str(course["_id"]),
+                "title": course.get("title"),
+                "description": course.get("description"),
+                "color": course.get("color", "#6366F1"),
+                "price": course.get("price", 0),
+            },
+            "freeTests": [
+                {"_id": str(t["_id"]), "title": t.get("title"), "description": t.get("description")}
+                for t in free_tests
+            ],
+            "paidTests": [
+                {
+                    "_id": str(b["_id"]),
+                    "title": b.get("title"),
+                    "description": b.get("description"),
+                    "price": b.get("price", 0),
+                    "points": b.get("points", []),
+                }
+                for b in bundles
+            ],
+        }
+    }
+# @router.get("/public/{course_id}/tests", tags=["Public"])
+# async def public_get_tests(course_id: str, db=Depends(get_database)):
+#     if not ObjectId.is_valid(course_id):
+#         raise HTTPException(status_code=400, detail="Invalid course ID")
+
+#     course = await db["admin_courses"].find_one({"_id": ObjectId(course_id)})
+#     if not course:
+#         raise HTTPException(status_code=404, detail="Course not found")
+
+#     free_papers = await db["admin_papers"].find({
+#         "course_id": course_id, "type": "free", "visible": True
+#     }).to_list(100)
+
+#     paid_papers = await db["admin_papers"].find({
+#         "course_id": course_id, "type": "paid", "visible": True
+#     }).to_list(100)
+
+#     return {
+#         "data": {
+#             "course": {
+#                 "_id": str(course["_id"]),
+#                 "title": course.get("title"),
+#                 "description": course.get("description"),
+#                 "color": course.get("color", "#6366F1"),
+#                 "price": course.get("price", 0),
+#             },
+#             "freeTests": [
+#                 {
+#                     "_id": str(p["_id"]),
+#                     "title": p.get("title"),
+#                     "description": p.get("description"),
+#                     "fileUrl": p.get("fileUrl"),
+#                 }
+#                 for p in free_papers
+#             ],
+#             "paidTests": [
+#                 {
+#                     "_id": str(p["_id"]),
+#                     "title": p.get("title"),
+#                     "description": p.get("description"),
+#                     "fileUrl": p.get("fileUrl"),
+#                     "price": p.get("price", 0),        # ← add karo
+#                     "points": p.get("points", []),      # ← add karo
+#                 }
+#                 for p in paid_papers
+#             ],
+#         }
+#     }
+
+# @router.get("/public/{course_id}/tests", tags=["Public"])
+# async def public_get_tests(course_id: str, db=Depends(get_database)):
+#     if not ObjectId.is_valid(course_id):
+#         raise HTTPException(status_code=400, detail="Invalid course ID")
+
+#     course = await db["admin_courses"].find_one({"_id": ObjectId(course_id)})
+#     if not course:
+#         raise HTTPException(status_code=404, detail="Course not found")
+
+#     free_papers = await db["admin_papers"].find({
+#         "course_id": course_id, "type": "free", "visible": True
+#     }).to_list(100)
+
+#     paid_papers = await db["admin_papers"].find({
+#         "course_id": course_id, "type": "paid", "visible": True
+#     }).to_list(100)
+
+#     return {
+#         "data": {
+#             "course": {
+#                 "_id": str(course["_id"]),
+#                 "title": course.get("title"),
+#                 "description": course.get("description"),
+#                 "color": course.get("color", "#6366F1"),
+#                 "price": course.get("price", 0),
+#             },
+#             "freeTests": [
+#                 {"_id": str(p["_id"]), "title": p.get("title"), "description": p.get("description"), "fileUrl": p.get("fileUrl")}
+#                 for p in free_papers
+#             ],
+#             "paidTests": [
+#                 {"_id": str(p["_id"]), "title": p.get("title"), "description": p.get("description"), "fileUrl": p.get("fileUrl")}
+#                 for p in paid_papers
+#             ],
+#         }
+#     }

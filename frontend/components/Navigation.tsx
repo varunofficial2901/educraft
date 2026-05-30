@@ -5,10 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, ShoppingCart, User, LogOut, LayoutDashboard, Eye, EyeOff, Loader2 } from "lucide-react";
 import Script from "next/script";
-<<<<<<< HEAD
-=======
 import { useCart } from "@/components/CartContext";
->>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
 
 const NAV_LINKS = [
   { name: "Home", href: "/" },
@@ -382,11 +379,8 @@ export default function Navigation() {
     router.push("/");
   };
 
-<<<<<<< HEAD
-=======
   const { cartCount } = useCart();
 
->>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
   const handleAuthSuccess = (userData: any) => {
     setUser(userData);
     router.refresh();
@@ -434,21 +428,12 @@ export default function Navigation() {
               </nav>
 
               <div className="hidden md:flex items-center space-x-4">
-<<<<<<< HEAD
-                <div className="relative group cursor-pointer mr-2">
-                  <ShoppingCart size={24} className="text-[#0F172A] dark:text-white hover:text-[#6366F1] transition-colors" />
-                  <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    0
-                  </span>
-                </div>
-=======
                 <Link href="/cart" className="relative group mr-2">
                   <ShoppingCart size={24} className="text-[#0F172A] dark:text-white hover:text-[#6366F1] transition-colors" />
                   <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 </Link>
->>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
 
                 {user ? (
                   <UserDropdown user={user} onLogout={handleLogout} />
@@ -470,21 +455,12 @@ export default function Navigation() {
               </div>
 
               <div className="flex items-center space-x-4 md:hidden text-[#0F172A] dark:text-white">
-<<<<<<< HEAD
-                <div className="relative group cursor-pointer mr-2">
-                  <ShoppingCart size={24} className="hover:text-[#6366F1] transition-colors" />
-                  <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                    0
-                  </span>
-                </div>
-=======
                 <Link href="/cart" className="relative group cursor-pointer mr-2">
                   <ShoppingCart size={24} className="hover:text-[#6366F1] transition-colors" />
                   <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 </Link>
->>>>>>> aa0808108ce08e9522b649e0d086794ebaf208f3
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="p-1 focus:outline-none focus:ring-2 border-transparent focus:ring-[#6366F1] rounded transition-colors hover:text-[#6366F1]"

@@ -150,6 +150,9 @@ async def admin_get_course(course_id: str, admin=Depends(get_current_admin), db=
             "_id": str(p["_id"]), "title": p.get("title", ""),
             "description": p.get("description", ""), "fileUrl": p.get("fileUrl"),
             "fileName": p.get("fileName"), "visible": p.get("visible", True),
+            "type": p.get("type", "free"),
+            "price": p.get("price", 0),           # ← add karo
+            "points": p.get("points", []),   # ← yeh add karo
             "createdAt": p.get("created_at"),
         }
         for p in papers_raw
@@ -171,10 +174,50 @@ async def admin_get_course(course_id: str, admin=Depends(get_current_admin), db=
                 "price": c.get("price", 0), "status": c.get("status", "active"),
                 "color": c.get("color", "#4f6ef7"), "thumbnail": c.get("thumbnail"),
             },
-            "papers":      papers,
+            "papers": papers,
             "enrollments": enrollments,
         }
     }
+
+# @router.get("/courses/{course_id}")
+# async def admin_get_course(course_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+#     c = await db["admin_courses"].find_one({"_id": oid(course_id)})
+#     if not c:
+#         raise HTTPException(status_code=404, detail="Course not found")
+
+#     papers_raw = await db["admin_papers"].find({"course_id": course_id}).sort("created_at", -1).to_list(100)
+#     enrolls_raw = await db["admin_enrollments"].find({"course_id": course_id}).sort("created_at", -1).to_list(100)
+
+#     papers = [
+#         {
+#             "_id": str(p["_id"]), "title": p.get("title", ""),
+#             "description": p.get("description", ""), "fileUrl": p.get("fileUrl"),
+#             "fileName": p.get("fileName"), "visible": p.get("visible", True),
+#             "createdAt": p.get("created_at"),
+#         }
+#         for p in papers_raw
+#     ]
+#     enrollments = [
+#         {
+#             "_id": str(e["_id"]), "studentName": e.get("studentName", ""),
+#             "email": e.get("email", ""), "phone": e.get("phone", ""),
+#             "paymentStatus": e.get("paymentStatus", "pending"),
+#             "createdAt": e.get("created_at"),
+#         }
+#         for e in enrolls_raw
+#     ]
+
+#     return {
+#         "data": {
+#             "course": {
+#                 "_id": str(c["_id"]), "title": c.get("title"), "description": c.get("description"),
+#                 "price": c.get("price", 0), "status": c.get("status", "active"),
+#                 "color": c.get("color", "#4f6ef7"), "thumbnail": c.get("thumbnail"),
+#             },
+#             "papers":      papers,
+#             "enrollments": enrollments,
+#         }
+#     }
 
 
 @router.post("/courses")
@@ -293,6 +336,9 @@ async def admin_create_paper(
     description: str  = Form(""),
     course:      str  = Form(...),
     visible:     str  = Form("true"),
+    type:        str  = Form("free"),
+    price:       float = Form(0),        # ← add karo
+    points:      str  = Form(""),
     paper:       Optional[UploadFile] = File(None),
     admin=Depends(get_current_admin),
     db=Depends(get_database),
@@ -310,6 +356,7 @@ async def admin_create_paper(
         "description": description,
         "course_id":   course,
         "visible":     visible.lower() == "true",
+        "type":        type,
         "fileUrl":     file_url,
         "fileName":    file_name,
         "created_at":  datetime.now(timezone.utc),
@@ -324,6 +371,8 @@ async def admin_update_paper(
     title:       Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     visible:     Optional[str] = Form(None),
+    price:       Optional[float] = Form(None),   # ← add karo
+    points:      Optional[str] = Form(None),  
     paper:       Optional[UploadFile] = File(None),
     admin=Depends(get_current_admin),
     db=Depends(get_database),
@@ -332,6 +381,9 @@ async def admin_update_paper(
     if title:       updates["title"]       = title
     if description is not None: updates["description"] = description
     if visible is not None: updates["visible"] = visible.lower() == "true"
+    if price is not None: updates["price"] = price          # ← add karo
+    if points is not None:                                   # ← add karo
+        updates["points"] = [p.strip() for p in points.split(",") if p.strip()]
     if paper and paper.filename:
         updates["fileName"] = paper.filename
         # TODO: upload to Cloudinary
@@ -637,3 +689,234 @@ async def admin_update_profile(body: dict, current_user=Depends(get_current_user
             "role":  updated["role"],
         }
     }
+# ═════════════════════════════════════════════════════════════
+# TESTS  —  /api/admin/tests
+# ═════════════════════════════════════════════════════════════
+
+@router.get("/tests/course/{course_id}")
+async def admin_list_tests(course_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    tests = await db["admin_tests"].find({"course_id": course_id}).sort("created_at", -1).to_list(50)
+    return {
+        "data": [
+            {
+                "_id": str(t["_id"]),
+                "title": t.get("title", ""),
+                "description": t.get("description", ""),
+                "duration_minutes": t.get("duration_minutes", 45),
+                "is_free": t.get("is_free", True),
+                "total_questions": len(t.get("questions", [])),
+                "createdAt": t.get("created_at"),
+            }
+            for t in tests
+        ]
+    }
+
+
+@router.post("/tests")
+async def admin_create_test(body: dict, admin=Depends(get_current_admin), db=Depends(get_database)):
+    course_id = body.get("course_id")
+    if not course_id or not ObjectId.is_valid(course_id):
+        raise HTTPException(status_code=400, detail="Invalid course ID")
+
+    questions = []
+    for q in body.get("questions", []):
+        questions.append({
+            "id": str(ObjectId()),
+            "text": q.get("text", ""),
+            "topic": q.get("topic", "General"),
+            "difficulty": q.get("difficulty", "easy"),
+            "options": q.get("options", []),
+            "correctAnswer": q.get("correctAnswer", ""),
+        })
+
+    doc = {
+        "course_id": course_id,
+        "title": body.get("title", ""),
+        "description": body.get("description", ""),
+        "duration_minutes": body.get("duration_minutes", 45),
+        "is_free": body.get("is_free", True),
+        "questions": questions,
+        "total_questions": len(questions),
+        "total_marks": len(questions),
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = await db["admin_tests"].insert_one(doc)
+    return {"data": {**doc, "_id": str(result.inserted_id)}}
+
+
+@router.get("/tests/{test_id}")
+async def admin_get_test(test_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    t = await db["admin_tests"].find_one({"_id": oid(test_id)})
+    if not t:
+        raise HTTPException(status_code=404, detail="Test not found")
+    return {
+        "data": {
+            "_id": str(t["_id"]),
+            "title": t.get("title", ""),
+            "description": t.get("description", ""),
+            "duration_minutes": t.get("duration_minutes", 45),
+            "is_free": t.get("is_free", True),
+            "questions": t.get("questions", []),
+            "total_questions": len(t.get("questions", [])),
+        }
+    }
+
+
+@router.delete("/tests/{test_id}")
+async def admin_delete_test(test_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    result = await db["admin_tests"].delete_one({"_id": oid(test_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Test not found")
+    return {"message": "Test deleted"}
+
+
+@router.get("/tests/public/{test_id}")
+async def public_get_test(test_id: str, db=Depends(get_database)):
+    t = await db["admin_tests"].find_one({"_id": oid(test_id)})
+    if not t:
+        raise HTTPException(status_code=404, detail="Test not found")
+    return {
+        "data": {
+            "_id": str(t["_id"]),
+            "title": t.get("title", ""),
+            "description": t.get("description", ""),
+            "duration_minutes": t.get("duration_minutes", 45),
+            "total_questions": len(t.get("questions", [])),
+            "total_marks": t.get("total_marks", len(t.get("questions", []))),
+            "questions": t.get("questions", []),
+        }
+    }
+# ═════════════════════════════════════════════════════════════
+# BUNDLES  —  /api/admin/bundles
+# ═════════════════════════════════════════════════════════════
+
+@router.get("/bundles/course/{course_id}")
+async def admin_list_bundles(course_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    bundles = await db["admin_bundles"].find({"course_id": course_id}).sort("created_at", -1).to_list(50)
+    return {
+        "data": [
+            {
+                "_id": str(b["_id"]),
+                "title": b.get("title", ""),
+                "description": b.get("description", ""),
+                "price": b.get("price", 0),
+                "points": b.get("points", []),
+                "visible": b.get("visible", True),
+                "testPaperCount": len(b.get("test_papers", [])),
+                "createdAt": b.get("created_at"),
+            }
+            for b in bundles
+        ]
+    }
+
+
+@router.post("/bundles")
+async def admin_create_bundle(
+    title:       str   = Form(...),
+    description: str   = Form(""),
+    course_id:   str   = Form(...),
+    price:       float = Form(0),
+    points:      str   = Form(""),
+    admin=Depends(get_current_admin),
+    db=Depends(get_database),
+):
+    doc = {
+        "title": title,
+        "description": description,
+        "course_id": course_id,
+        "price": price,
+        "points": [p.strip() for p in points.split(",") if p.strip()],
+        "visible": True,
+        "test_papers": [],
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = await db["admin_bundles"].insert_one(doc)
+    return {"data": {**doc, "_id": str(result.inserted_id)}}
+
+
+@router.get("/bundles/{bundle_id}")
+async def admin_get_bundle(bundle_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    b = await db["admin_bundles"].find_one({"_id": oid(bundle_id)})
+    if not b:
+        raise HTTPException(status_code=404, detail="Bundle not found")
+    return {
+        "data": {
+            "_id": str(b["_id"]),
+            "title": b.get("title", ""),
+            "description": b.get("description", ""),
+            "price": b.get("price", 0),
+            "points": b.get("points", []),
+            "visible": b.get("visible", True),
+            "course_id": b.get("course_id", ""),
+            "test_papers": b.get("test_papers", []),
+        }
+    }
+
+
+@router.delete("/bundles/{bundle_id}")
+async def admin_delete_bundle(bundle_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    result = await db["admin_bundles"].delete_one({"_id": oid(bundle_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bundle not found")
+    return {"message": "Bundle deleted"}
+
+
+@router.post("/bundles/{bundle_id}/papers/upload-csv")
+async def bundle_upload_csv(
+    bundle_id: str,
+    title:     str = Form(...),
+    file:      UploadFile = File(...),
+    admin=Depends(get_current_admin),
+    db=Depends(get_database),
+):
+    import csv, io
+    b = await db["admin_bundles"].find_one({"_id": oid(bundle_id)})
+    if not b:
+        raise HTTPException(status_code=404, detail="Bundle not found")
+
+    content = await file.read()
+    text = content.decode('utf-8-sig')
+    reader = csv.DictReader(io.StringIO(text))
+
+    questions = []
+    for row in reader:
+        questions.append({
+            "id": str(ObjectId()),
+            "text": row.get("question", "").strip(),
+            "topic": row.get("topic", "General").strip(),
+            "difficulty": row.get("difficulty", "easy").strip(),
+            "options": [
+                {"id": "A", "text": row.get("option_a", "").strip()},
+                {"id": "B", "text": row.get("option_b", "").strip()},
+                {"id": "C", "text": row.get("option_c", "").strip()},
+                {"id": "D", "text": row.get("option_d", "").strip()},
+            ],
+            "correctAnswer": row.get("correct_answer", "A").strip().upper(),
+        })
+
+    if not questions:
+        raise HTTPException(status_code=400, detail="No questions found in CSV")
+
+    paper = {
+        "id": str(ObjectId()),
+        "title": title,
+        "total_questions": len(questions),
+        "questions": questions,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await db["admin_bundles"].update_one(
+        {"_id": oid(bundle_id)},
+        {"$push": {"test_papers": paper}}
+    )
+
+    return {"data": paper, "message": f"Test paper added with {len(questions)} questions"}
+
+
+@router.delete("/bundles/{bundle_id}/papers/{paper_id}")
+async def bundle_delete_paper(bundle_id: str, paper_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    await db["admin_bundles"].update_one(
+        {"_id": oid(bundle_id)},
+        {"$pull": {"test_papers": {"id": paper_id}}}
+    )
+    return {"message": "Paper deleted"}

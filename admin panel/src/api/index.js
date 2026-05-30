@@ -70,7 +70,21 @@ export const messagesAPI = {
 
 export default api;
 
+export const testsAPI = {
+  getBycourse: (courseId) => api.get(`/admin/tests/course/${courseId}`),
+  create:      (data)     => api.post('/admin/tests', data),
+  getOne:      (id)       => api.get(`/admin/tests/${id}`),
+  delete:      (id)       => api.delete(`/admin/tests/${id}`),
+};
 
+export const bundlesAPI = {
+  getByCourse: (courseId)           => api.get(`/admin/bundles/course/${courseId}`),
+  create:      (fd)                 => api.post('/admin/bundles', fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getOne:      (id)                 => api.get(`/admin/bundles/${id}`),
+  delete:      (id)                 => api.delete(`/admin/bundles/${id}`),
+  uploadCSV:   (bundleId, fd)       => api.post(`/admin/bundles/${bundleId}/papers/upload-csv`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deletePaper: (bundleId, paperId)  => api.delete(`/admin/bundles/${bundleId}/papers/${paperId}`),
+};
 
 
 
