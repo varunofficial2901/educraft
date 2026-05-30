@@ -27,13 +27,13 @@ def fmt_course(c: dict) -> CoursePublic:
         created_at=c["created_at"],
     )
 
-
+  
 # ─────────────────────────────────────────
 # PUBLIC: List courses
 # ─────────────────────────────────────────
 
 @router.get("", response_model=List[CoursePublic])
-async def list_courses(
+async def list_courses( 
     filter: Optional[str] = Query(None, description="FREE or category name"),
     category: Optional[str] = Query(None),
     db=Depends(get_database),
