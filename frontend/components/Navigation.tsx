@@ -401,13 +401,15 @@ export default function Navigation() {
         />
 
         <div className={`relative z-10 transition-all duration-300 ${isNavSolid ? "py-4" : "py-6"}`}>
-          <div className="container mx-auto px-4 md:px-8">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
             <div className="flex items-center justify-between">
 
-              <Link href="/" className="text-3xl font-fraunces font-bold text-[#0F172A] dark:text-white">
+              {/* Logo - Left Alignment */}
+              <Link href="/" className="text-3xl font-fraunces font-bold text-[#0F172A] dark:text-white mr-auto md:mr-12">
                 EduCraft
               </Link>
 
+              {/* Center Navigation Links */}
               <nav className="hidden md:flex items-center space-x-8">
                 {NAV_LINKS.map((link) => {
                   const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
@@ -427,8 +429,9 @@ export default function Navigation() {
                 })}
               </nav>
 
-              <div className="hidden md:flex items-center space-x-4">
-                <Link href="/cart" className="relative group mr-2">
+              {/* Right-Aligned Actions */}
+              <div className="hidden md:flex items-center space-x-6">
+                <Link href="/cart" className="relative group">
                   <ShoppingCart size={24} className="text-[#0F172A] dark:text-white hover:text-[#6366F1] transition-colors" />
                   <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}
@@ -455,7 +458,7 @@ export default function Navigation() {
               </div>
 
               <div className="flex items-center space-x-4 md:hidden text-[#0F172A] dark:text-white">
-                <Link href="/cart" className="relative group cursor-pointer mr-2">
+                <Link href="/cart" className="relative group cursor-pointer">
                   <ShoppingCart size={24} className="hover:text-[#6366F1] transition-colors" />
                   <span className="absolute -top-1.5 -right-2 bg-[#6366F1] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}

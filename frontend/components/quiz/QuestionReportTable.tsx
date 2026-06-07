@@ -16,9 +16,6 @@ export function QuestionReportTable({ answers }: QuestionReportTableProps) {
               Q No.
             </th>
             <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
-              Topic
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
               Your Answer
             </th>
             <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">
@@ -42,9 +39,6 @@ export function QuestionReportTable({ answers }: QuestionReportTableProps) {
               >
                 <td className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">
                   {question.id}
-                </td>
-                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                  {question.topic}
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                   {userAnswer ? `${userAnswer}.` : "—"}

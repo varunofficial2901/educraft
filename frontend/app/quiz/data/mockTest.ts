@@ -16,6 +16,7 @@ export type QuizTest = {
   durationMinutes: number;
   bundle: string;
   questions: QuizQuestion[];
+  type?: "mcq" | "writing";
 };
 
 export const mockTest: QuizTest = {
@@ -24,7 +25,7 @@ export const mockTest: QuizTest = {
   subtitle: "Numerical | Logical | Verbal Reasoning",
   totalQuestions: 40,
   totalMarks: 40,
-  durationMinutes: 45,
+  durationMinutes: 60,
   bundle: "Selective Entry Bundle #1",
   questions: [
     {
@@ -596,7 +597,7 @@ export const mathAssessment: QuizTest = {
   subtitle: "Basic maths, fractions & geometry",
   totalQuestions: 40,
   totalMarks: 40,
-  durationMinutes: 45,
+  durationMinutes: 60,
   bundle: "Mathematics Free Assessment",
   questions: [
     {
@@ -1122,9 +1123,31 @@ export const mathAssessment: QuizTest = {
   ],
 };
 
+export const writingAssessment: QuizTest = {
+  id: "writing-assessment-1",
+  title: "Writing Skills Assessment Paper",
+  subtitle: "Creative Writing Prompt",
+  totalQuestions: 1,
+  totalMarks: 20,
+  durationMinutes: 30,
+  bundle: "Writing Skills",
+  type: "writing",
+  questions: [
+    {
+      id: 1,
+      text: "Write a short narrative describing a time when you had to overcome a challenge. Focus on how you felt and what you learned from the experience.",
+      topic: "Creative Writing",
+      difficulty: "medium",
+      options: [],
+      correctAnswer: "",
+    },
+  ],
+};
+
 export const quizTests: Record<string, QuizTest> = {
   [mockTest.id]: mockTest,
   [mathAssessment.id]: mathAssessment,
+  [writingAssessment.id]: writingAssessment,
 };
 
 export function getQuizTest(testId: string): QuizTest {

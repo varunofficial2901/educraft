@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { useQuiz } from "@/app/quiz/context/QuizContext";
 import { CountdownTimer } from "@/components/quiz/CountdownTimer";
 import { OptionButton } from "@/components/quiz/OptionButton";
@@ -34,10 +33,14 @@ export default function TakePage() {
       setAutoSubmit(true);
       submitQuiz();
       setTimeout(() => {
-        router.push(`/quiz/${currentTest.id}/submit`);
-      }, 1000);
+        if (currentTest.type === "writing") {
+          router.push(`/quiz/${currentTest.id}/results`);
+        } else {
+          router.push(`/quiz/${currentTest.id}/results`);
+        }
+      }, 500);
     }
-  }, [state.timeRemainingSeconds, autoSubmit, submitQuiz, router, currentTest.id]);
+  }, [state.timeRemainingSeconds, autoSubmit, submitQuiz, router, currentTest.id, currentTest.type]);
 
   const handleNext = () => {
     if (state.currentQuestion < currentTest.questions.length - 1) {
@@ -61,12 +64,7 @@ export default function TakePage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800"
-    >
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Top Bar */}
       <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
@@ -83,12 +81,11 @@ export default function TakePage() {
 
             {/* Centre: Timer */}
             <div className="flex-shrink-0">
-                <CountdownTimer
+              <CountdownTimer
                 initialSeconds={state.timeRemainingSeconds}
                 onTimeUpdate={updateTime}
                 onTimeUp={() => {
-                  submitQuiz();
-                  router.push(`/quiz/${currentTest.id}/submit`);
+                  // Submission is handled by the page effect once the timer reaches zero.
                 }}
               />
             </div>
@@ -105,14 +102,8 @@ export default function TakePage() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Panel - Question Area */}
-          <div className="lg:col-span-2">
-            <motion.div
-              key={current?.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm"
-            >
+          <div className={currentTest.type === "writing" ? "lg:col-span-3" : "lg:col-span-2"}>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm">
               {/* Question Header */}
               <div className="mb-6">
                 <p className="text-indigo-600 dark:text-indigo-400 font-inter font-semibold mb-2">
@@ -121,133 +112,173 @@ export default function TakePage() {
                 <h2 className="font-inter text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
                   {current?.text}
                 </h2>
-                <button
-                  type="button"
-                  onClick={scrollToPalette}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-4 py-2 text-sm font-inter font-semibold text-[#3730A3] hover:bg-[#E0E7FF] transition-colors"
-                >
-                  View All Questions
-                </button>
+                {currentTest.type !== "writing" && (
+                  <button
+                    type="button"
+                    onClick={scrollToPalette}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-4 py-2 text-sm font-inter font-semibold text-[#3730A3] hover:bg-[#E0E7FF] transition-colors"
+                  >
+                    View All Questions
+                  </button>
+                )}
               </div>
 
-              {/* Options */}
-              <div className="space-y-3 mb-8">
-                {current?.options.map((option, idx) => (
-                  <OptionButton
-                    key={option.id}
-                    id={option.id}
-                    text={option.text}
-                    isSelected={selectedAnswer === option.id}
-                    onClick={() => selectAnswer(current.id, option.id)}
-                    index={idx}
+              {/* Options / Textarea */}
+              {currentTest.type === "writing" ? (
+                <div className="mb-8 font-sans">
+                  <label className="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Your Response
+                  </label>
+                  <textarea
+                    value={selectedAnswer || ""}
+                    onChange={(e) => selectAnswer(current.id, e.target.value)}
+                    onCopy={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    className="w-full h-80 px-5 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6366F1] font-sans text-base leading-relaxed resize-y shadow-inner"
+                    placeholder="Type your essay or response here..."
                   />
-                ))}
-              </div>
+                  <div className="flex justify-between items-center mt-3 text-xs font-semibold text-gray-400">
+                    <span>Word Count: {((selectedAnswer || "").trim().split(/\s+/).filter(Boolean).length)}</span>
+                    <span className="text-red-500/80">Copy, Paste, and Cut are disabled</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 mb-8">
+                  {current?.options.map((option, idx) => (
+                    <OptionButton
+                      key={option.id}
+                      id={option.id}
+                      text={option.text}
+                      isSelected={selectedAnswer === option.id}
+                      onClick={() => selectAnswer(current.id, option.id)}
+                      index={idx}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Bottom Controls */}
               <div className="flex items-center justify-between gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => toggleMarkForReview(current?.id)}
-                  className={`px-6 py-3 rounded-xl font-inter font-semibold transition-colors ${
-                    isMarked
-                      ? "bg-violet-600 text-white hover:bg-violet-700"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {isMarked ? "✓ Marked" : "Mark for Review"}
-                </motion.button>
+                {currentTest.type !== "writing" ? (
+                  <>
+                    <button
+                      onClick={() => toggleMarkForReview(current?.id)}
+                      className={`px-6 py-3 rounded-xl font-inter font-semibold transition-colors ${
+                        isMarked
+                          ? "bg-violet-600 text-white hover:bg-violet-700"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                    >
+                      {isMarked ? "✓ Marked" : "Mark for Review"}
+                    </button>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => clearAnswer(current?.id)}
-                  className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-inter font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Clear
-                </motion.button>
+                    <button
+                      onClick={() => clearAnswer(current?.id)}
+                      className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-inter font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Clear
+                    </button>
 
-                <div className="flex items-center gap-4 ml-auto">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handlePrev}
-                    disabled={state.currentQuestion === 0}
-                    className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft size={20} />
-                  </motion.button>
+                    <div className="flex items-center gap-4 ml-auto">
+                      <button
+                        onClick={handlePrev}
+                        disabled={state.currentQuestion === 0}
+                        className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
 
-                  <span className="text-sm font-inter font-semibold text-gray-700 dark:text-gray-300">
-                    {state.currentQuestion + 1} / {currentTest.totalQuestions}
-                  </span>
+                      <span className="text-sm font-inter font-semibold text-gray-700 dark:text-gray-300">
+                        {state.currentQuestion + 1} / {currentTest.totalQuestions}
+                      </span>
 
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleNext}
-                    disabled={state.currentQuestion === currentTest.totalQuestions - 1}
-                    className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight size={20} />
-                  </motion.button>
+                      <button
+                        onClick={handleNext}
+                        disabled={state.currentQuestion === currentTest.totalQuestions - 1}
+                        className="p-2 rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
 
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleNext}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-inter font-semibold transition-colors"
-                  >
-                    NEXT →
-                  </motion.button>
-                </div>
+                      <button
+                        onClick={handleNext}
+                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-inter font-semibold transition-colors"
+                      >
+                        NEXT →
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => clearAnswer(current?.id)}
+                      className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-inter font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        submitQuiz();
+                        router.push(`/quiz/${currentTest.id}/results`);
+                      }}
+                      className="ml-auto px-6 py-3 bg-[#6366F1] hover:bg-indigo-600 text-white rounded-xl font-inter font-semibold transition-colors"
+                    >
+                      SUBMIT TEST →
+                    </button>
+                  </>
+                )}
               </div>
-            </motion.div>
+            </div>
           </div>
 
-          {/* Right Panel - Question Palette */}
-          <div className="hidden lg:block" id="question-palette">
-            <QuestionPalette
-              currentQuestion={state.currentQuestion}
-              statuses={state.statuses}
-              onQuestionSelect={goToQuestion}
-              onSubmit={() => {
-                submitQuiz();
-                router.push(`/quiz/${currentTest.id}/submit`);
-              }}
-            />
-          </div>
+          {/* Right Panel - Question Palette (Only MCQ) */}
+          {currentTest.type !== "writing" && (
+            <div className="hidden lg:block" id="question-palette">
+              <QuestionPalette
+                currentQuestion={state.currentQuestion}
+                statuses={state.statuses}
+                onQuestionSelect={goToQuestion}
+                onSubmit={() => {
+                  submitQuiz();
+                  router.push(`/quiz/${currentTest.id}/submit`);
+                }}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Mobile Question Palette */}
-        <div className="lg:hidden mt-8" id="question-palette">
-          <QuestionPalette
-            currentQuestion={state.currentQuestion}
-            statuses={state.statuses}
-            onQuestionSelect={goToQuestion}
-            onSubmit={() => {
-              submitQuiz();
-              router.push(`/quiz/${currentTest.id}/submit`);
-            }}
-          />
-        </div>
+        {currentTest.type !== "writing" && (
+          <>
+            {/* Mobile Question Palette */}
+            <div className="lg:hidden mt-8" id="question-palette">
+              <QuestionPalette
+                currentQuestion={state.currentQuestion}
+                statuses={state.statuses}
+                onQuestionSelect={goToQuestion}
+                onSubmit={() => {
+                  submitQuiz();
+                  router.push(`/quiz/${currentTest.id}/results`);
+                }}
+              />
+            </div>
 
-        {/* Mobile Submit Button */}
-        <div className="lg:hidden mt-8 text-center">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              submitQuiz();
-              router.push(`/quiz/${currentTest.id}/submit`);
-            }}
-            className="w-full px-6 py-4 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-inter font-bold text-lg transition-colors"
-          >
-            ✓ SUBMIT TEST
-          </motion.button>
-        </div>
+            {/* Mobile Submit Button */}
+            <div className="lg:hidden mt-8 text-center">
+              <button
+                onClick={() => {
+                  submitQuiz();
+                  router.push(`/quiz/${currentTest.id}/results`);
+                }}
+                className="w-full px-6 py-4 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-inter font-bold text-lg transition-colors"
+              >
+                ✓ SUBMIT TEST
+              </button>
+            </div>
+          </>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -1,9 +1,6 @@
 "use client";
 
-import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
-
-const JOURNEY_IMAGE = "/2.jpeg";
 
 const STEPS = [
   {
@@ -26,15 +23,13 @@ export default function SuccessJourney() {
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
         <div className="flex flex-col lg:flex-row items-center gap-16">
           
-          {/* Left Side: Image */}
-          <div className="w-full lg:w-1/2 h-[500px] relative rounded-2xl overflow-hidden shrink-0 shadow-lg">
-            <Image 
-              src={JOURNEY_IMAGE}
-              alt="Child's learning journey"
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
+          {/* Left Side: Image Placeholder */}
+          <div className="w-full lg:w-1/2 h-[400px] md:h-[500px] relative rounded-3xl overflow-hidden shrink-0 bg-gradient-to-br from-[#EEF2FF] to-slate-100 dark:from-slate-800 dark:to-slate-900 border border-[#E2E8F0] dark:border-slate-700 flex flex-col items-center justify-center text-[#64748B] text-center p-6 gap-3 select-none">
+            <span className="text-6xl">🚀</span>
+            <div>
+              <p className="font-serif font-bold text-xl text-[#0F172A] dark:text-white">Learning Journey Image</p>
+              <p className="font-sans text-xs text-[#64748B] mt-1">Responsive Placeholder (Aspect Ratio ~1:1)</p>
+            </div>
           </div>
 
           {/* Right Side: Content */}
@@ -58,7 +53,7 @@ export default function SuccessJourney() {
                     <h3 className="text-xl font-serif font-bold text-[#0F172A] mb-2">
                       {step.title}
                     </h3>
-                    <p className="text-[#334155] font-sans">
+                    <p className="text-[#334155] font-sans text-sm md:text-base">
                       {step.description}
                     </p>
                   </div>

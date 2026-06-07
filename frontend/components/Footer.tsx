@@ -30,7 +30,7 @@ export default function Footer() {
             <div className="flex flex-col gap-3 text-sm text-[#64748B]">
               <Link href="/courses" className="hover:text-[#6366F1] transition-colors">Test Series</Link>
               <Link href="/courses?filter=FREE" className="hover:text-[#6366F1] transition-colors">Free Practice Test</Link>
-              <Link href="/#how-it-works" className="hover:text-[#6366F1] transition-colors">How It Works</Link>
+              {/* <Link href="/#how-it-works" className="hover:text-[#6366F1] transition-colors">How It Works</Link> */}
               <Link href="/about-us" className="hover:text-[#6366F1] transition-colors">About Us</Link>
             </div>
           </div>
@@ -43,7 +43,7 @@ export default function Footer() {
               <Link href="/faq" className="hover:text-[#6366F1] transition-colors">Frequently Asked Questions</Link>
               <Link href="/privacy-policy" className="hover:text-[#6366F1] transition-colors">Privacy Policy</Link>
               <Link href="/terms-of-service" className="hover:text-[#6366F1] transition-colors">Terms of Service</Link>
-              <Link href="/refund-policy" className="hover:text-[#6366F1] transition-colors">Refund Policy</Link>
+              {/* <Link href="/refund-policy" className="hover:text-[#6366F1] transition-colors">Refund Policy</Link> */}
             </div>
           </div>
 

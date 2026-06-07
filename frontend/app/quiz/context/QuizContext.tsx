@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { getQuizTest, QuizTest } from "../data/mockTest";
 
 export type QuestionStatus = "not-visited" | "unanswered" | "answered" | "marked" | "answered-marked";
@@ -29,6 +29,7 @@ interface QuizContextValue {
   state: QuizState;
   currentTest: QuizTest;
   startQuiz: () => void;
+  resumeQuiz: () => void;
   selectAnswer: (questionId: number, optionId: string) => void;
   toggleMarkForReview: (questionId: number) => void;
   goToQuestion: (index: number) => void;
@@ -66,6 +67,42 @@ export function QuizProvider({ children, testId }: { children: React.ReactNode; 
       };
     });
   }, [currentTest]);
+
+  const resumeQuiz = useCallback(() => {
+    const saved = localStorage.getItem(`edu_quiz_progress_${testId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setState({
+          answers: parsed.answers || {},
+          statuses: parsed.statuses || {},
+          markedForReview: parsed.markedForReview || {},
+          currentQuestion: parsed.currentQuestion || 0,
+          startedAt: parsed.startedAt ? new Date(parsed.startedAt) : new Date(),
+          submittedAt: null,
+          timeRemainingSeconds: parsed.timeRemainingSeconds ?? (currentTest.durationMinutes * 60),
+        });
+      } catch (e) {
+        console.error("Failed to parse saved quiz progress", e);
+      }
+    }
+  }, [testId, currentTest]);
+
+  useEffect(() => {
+    if (state.startedAt && !state.submittedAt) {
+      localStorage.setItem(
+        `edu_quiz_progress_${testId}`,
+        JSON.stringify({
+          answers: state.answers,
+          statuses: state.statuses,
+          markedForReview: state.markedForReview,
+          currentQuestion: state.currentQuestion,
+          startedAt: state.startedAt.toISOString(),
+          timeRemainingSeconds: state.timeRemainingSeconds,
+        })
+      );
+    }
+  }, [state.answers, state.statuses, state.markedForReview, state.currentQuestion, state.startedAt, state.submittedAt, state.timeRemainingSeconds, testId]);
 
   const selectAnswer = useCallback((questionId: number, optionId: string) => {
     setState((prev) => {
@@ -158,7 +195,8 @@ export function QuizProvider({ children, testId }: { children: React.ReactNode; 
       ...prev,
       submittedAt: new Date(),
     }));
-  }, []);
+    localStorage.removeItem(`edu_quiz_progress_${testId}`);
+  }, [testId]);
 
   const updateTime = useCallback((seconds: number) => {
     setState((prev) => ({
@@ -208,6 +246,7 @@ export function QuizProvider({ children, testId }: { children: React.ReactNode; 
       state,
       currentTest,
       startQuiz,
+      resumeQuiz,
       selectAnswer,
       toggleMarkForReview,
       goToQuestion,
@@ -216,7 +255,7 @@ export function QuizProvider({ children, testId }: { children: React.ReactNode; 
       updateTime,
       clearAnswer,
     }),
-    [state, currentTest, startQuiz, selectAnswer, toggleMarkForReview, goToQuestion, submitQuiz, getResults, updateTime, clearAnswer]
+    [state, currentTest, startQuiz, resumeQuiz, selectAnswer, toggleMarkForReview, goToQuestion, submitQuiz, getResults, updateTime, clearAnswer]
   );
 
   return (

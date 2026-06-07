@@ -7,9 +7,9 @@ export const metadata: Metadata = {
 
 export default function RefundPolicyPage() {
   return (
-    <div className="min-h-screen pt-[120px] pb-20 bg-[#F8FAFC]">
-      <div className="container mx-auto px-4 md:px-8 max-w-5xl bg-white p-8 md:p-12 rounded-3xl border border-[#E2E8F0] shadow-sm">
-        <div className="text-center mb-10">
+    <div className="min-h-screen pt-[120px] pb-20 bg-white">
+      <div className="container mx-auto px-4 md:px-8 max-w-4xl">
+        <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.3em] text-[#6366F1] font-semibold mb-3">
             Refund Policy
           </p>

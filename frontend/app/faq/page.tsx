@@ -8,14 +8,16 @@ export const metadata: Metadata = {
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen pt-[80px] bg-[--background]">
-      {/* Hero */}
-      <div className="h-[220px] md:h-[300px] flex items-center justify-center bg-[--alt-bg] border-b border-[--accent]">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-[--primary] animate-[fade-in-up_0.5s_ease-out]">
+    <div className="min-h-screen pt-[120px] pb-20 bg-white">
+      <div className="container mx-auto px-4 md:px-8 max-w-4xl">
+        
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#0F172A] mb-16 text-center">
           Frequently Asked Questions
         </h1>
+
+        <FAQAccordion />
+        
       </div>
-      <FAQAccordion />
     </div>
   );
 }

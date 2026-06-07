@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuiz } from "@/app/quiz/context/QuizContext";
 import { StatCircle } from "@/components/quiz/StatCircle";
@@ -12,29 +12,111 @@ export default function ResultsPage() {
   const { state, currentTest, getResults } = useQuiz();
   const results = getResults();
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (currentTest.type === "writing") {
+        localStorage.setItem("edu_writing_status", "Pending Review");
+      }
+      
+      const scoreValue = currentTest.type === "writing" ? "Pending" : results.score;
+      const recent = localStorage.getItem("edu_recent_assessments");
+      let list = [];
+      try {
+        list = recent ? JSON.parse(recent) : [];
+      } catch (e) {
+        list = [];
+      }
+
+      // Avoid duplicate logs
+      const alreadyExists = list.some(
+        (item: any) => item.testId === currentTest.id && item.score === scoreValue
+      );
+      
+      if (!alreadyExists) {
+        list.unshift({
+          testId: currentTest.id,
+          testTitle: currentTest.title,
+          bundleName: currentTest.bundle,
+          date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+          score: scoreValue,
+          totalMarks: currentTest.totalMarks,
+          type: currentTest.type || "mcq",
+        });
+        localStorage.setItem("edu_recent_assessments", JSON.stringify(list.slice(0, 10)));
+      }
+    }
+  }, [currentTest.id, currentTest.title, currentTest.totalMarks, currentTest.type, results.score]);
+
   const handleViewAnalytics = () => {
     router.push(`/quiz/${currentTest.id}/analytics`);
   };
 
   // Calculate marks breakdown
   const totalSkippedMarks = results.skipped;
-  const totalIncorrectMarks = results.incorrect;
 
+  // Custom UI for Writing Test Type
+  if (currentTest.type === "writing") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 flex items-center justify-center">
+        <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-8 md:p-12 text-center">
+          <div className="w-20 h-20 rounded-full bg-green-50 dark:bg-green-950 flex items-center justify-center mx-auto mb-6 text-green-600 dark:text-green-400">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <h1 className="font-fraunces text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
+            Submission Received
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 font-sans text-base leading-relaxed mb-8">
+            Your response has been sent for review. Once reviewed, your result will be shared at your registered email address.
+          </p>
+
+          <div className="space-y-6 mb-8">
+            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
+              <p className="text-sm uppercase tracking-[0.26em] text-slate-500 dark:text-slate-400 font-semibold mb-2">
+                Status
+              </p>
+              <div className="inline-block px-4 py-2 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-semibold">
+                Pending Review
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 text-left">
+                <span className="text-2xl">📧</span>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">Result Delivery</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Result will be sent to your registered email.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 text-left">
+                <span className="text-2xl">🔔</span>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">Notification</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">You will be notified once the review is completed.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="w-full bg-[#6366F1] hover:bg-indigo-600 text-white font-inter font-bold py-4 px-6 rounded-2xl transition-colors text-lg"
+          >
+            Go To My Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // MCQ standard layout without motion
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4"
-    >
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Top Section - Score Summary */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden"
-        >
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden">
           <div className="p-8 md:p-12">
             {/* Header */}
             <div className="text-center mb-8">
@@ -89,13 +171,9 @@ export default function ResultsPage() {
                   </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full mt-4 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-inter font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
+                <button className="w-full mt-4 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-inter font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   VIEW SOLUTION
-                </motion.button>
+                </button>
               </div>
 
               {/* Right - Stat Circles */}
@@ -141,39 +219,32 @@ export default function ResultsPage() {
             </div>
 
             {/* View Analytics Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <button
               onClick={handleViewAnalytics}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-inter font-bold py-3 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2"
             >
               View Detailed Analytics <ChevronRight size={20} />
-            </motion.button>
+            </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* Bottom Section - Question Report */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-8 md:p-12"
-        >
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-8 md:p-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-fraunces text-3xl font-bold text-gray-900 dark:text-white">
               Question Report
             </h2>
-            <motion.button
+            <button
               onClick={handleViewAnalytics}
               className="text-indigo-600 dark:text-indigo-400 font-inter font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-2 transition-colors"
             >
               View Report <ChevronRight size={18} />
-            </motion.button>
+            </button>
           </div>
 
           <QuestionReportTable answers={state.answers} />
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
