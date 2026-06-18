@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.db.database import connect_db, close_db
 from app.api.routes import auth, courses, tests, general, admin
+from app.api.routes import public  
 
 
 @asynccontextmanager
@@ -28,7 +29,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:3001",  # ← add this
+        "http://localhost:3001",
+        "http://localhost:3002",  # ← yeh add karo  # ← add this
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,6 +43,7 @@ app.include_router(courses.router,  prefix="/api/v1")
 app.include_router(tests.router,    prefix="/api/v1")
 app.include_router(general.router,  prefix="/api/v1")
 app.include_router(admin.router,    prefix="/api/admin")
+app.include_router(public.router, prefix="/api/public")
 
 @app.get("/")
 async def root():

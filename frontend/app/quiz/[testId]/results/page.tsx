@@ -43,6 +43,26 @@ export default function ResultsPage() {
           type: currentTest.type || "mcq",
         });
         localStorage.setItem("edu_recent_assessments", JSON.stringify(list.slice(0, 10)));
+
+        // ─── Backend mein save karo ───────────────────────────────
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/public/quiz/results`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            test_id:     currentTest.id,
+            test_title:  currentTest.title,
+            bundle:      currentTest.bundle,
+            score:       currentTest.type === "writing" ? 0 : results.score,
+            total_marks: currentTest.totalMarks,
+            correct:     results.correct,
+            incorrect:   results.incorrect,
+            skipped:     results.skipped,
+            accuracy:    results.accuracy,
+            time_spent:  results.timeSpent,
+            type:        currentTest.type || "mcq",
+          }),
+        }).catch(err => console.error('Failed to save result:', err));
+        // ─────────────────────────────────────────────────────────
       }
     }
   }, [currentTest.id, currentTest.title, currentTest.totalMarks, currentTest.type, results.score]);
@@ -242,7 +262,7 @@ export default function ResultsPage() {
             </button>
           </div>
 
-          <QuestionReportTable answers={state.answers} />
+          <QuestionReportTable answers={state.answers} questions={currentTest.questions} />
         </div>
       </div>
     </div>

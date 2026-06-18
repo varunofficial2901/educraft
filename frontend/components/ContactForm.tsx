@@ -33,14 +33,14 @@ export default function ContactForm() {
   const onSubmit = async (data: ContactFormValues) => {
   setIsSubmitting(true);
   try {
-    const response = await fetch('http://localhost:8000/api/admin/messages', {
+    const response = await fetch('http://localhost:8000/api/admin/messages/public', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        firstName: data.firstName,
-        lastName: data.lastName,
+        name: `${data.firstName} ${data.lastName}`.trim(),
         email: data.email,
         message: data.message,
+        type: 'General',
       }),
     });
 

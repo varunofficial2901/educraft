@@ -6,7 +6,6 @@ import httpx
 import resend
 import os
 
-resend.api_key = os.getenv("RESEND_API_KEY")
 
 from app.schemas.schemas import (
     SignUpRequest, SignInRequest, GoogleAuthRequest,
@@ -17,6 +16,8 @@ from app.core.security import create_access_token, create_refresh_token, decode_
 from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.db.database import get_database
+
+resend.api_key = settings.RESEND_API_KEY
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -79,6 +80,41 @@ async def signup(body: SignUpRequest, db=Depends(get_database)):
     user_doc["_id"] = result.inserted_id
 
     tokens = make_tokens(str(result.inserted_id), "student")
+
+    # ── Welcome email ────────────────────────────────────────────────────────
+    try:
+        resend.Emails.send({
+            "from": "EduCraft <onboarding@resend.dev>",
+            "to": [body.email],
+            "subject": "Welcome to EduCraft! 🎉",
+            "html": f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #6366F1;">Welcome to EduCraft! 🎉</h2>
+                <p>Hi {body.first_name},</p>
+                <p>Your EduCraft account has been successfully created!</p>
+                <p><strong>Email:</strong> {body.email}</p>
+                <br>
+                <p>Here's what you can do next:</p>
+                <ul>
+                    <li>🎓 Browse and enroll in courses</li>
+                    <li>📝 Take free assessments</li>
+                    <li>📊 Track your progress</li>
+                </ul>
+                <br>
+                <a href="{settings.FRONTEND_URL}"
+                   style="background-color: #6366F1; color: white; padding: 12px 24px;
+                          text-decoration: none; border-radius: 6px; display: inline-block;">
+                    Start Learning →
+                </a>
+                <br><br>
+                <p>Happy Learning! 🚀</p>
+                <p><strong>Team EduCraft</strong></p>
+            </div>
+            """
+        })
+    except Exception as e:
+        print(f"[EMAIL ERROR] Welcome email failed: {e}")
+
     return TokenResponse(**tokens, user=format_user(user_doc))
 
 
@@ -128,7 +164,8 @@ async def signin(body: SignInRequest, db=Depends(get_database)):
 
 @router.post("/google", response_model=TokenResponse)
 async def google_auth(body: GoogleAuthRequest, db=Depends(get_database)):
-    """Verify Google ID token and sign in or create account."""
+    print(f"[DEBUG] RESEND_API_KEY: {os.getenv('RESEND_API_KEY')}")  # ← add here
+    print(f"[DEBUG] is_new_user will be checked after DB lookup")
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             f"https://oauth2.googleapis.com/tokeninfo?id_token={body.id_token}"
@@ -139,7 +176,6 @@ async def google_auth(body: GoogleAuthRequest, db=Depends(get_database)):
 
     google_data = resp.json()
 
-    # Validate audience
     if settings.GOOGLE_CLIENT_ID and google_data.get("aud") != settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=401, detail="Token audience mismatch")
 
@@ -147,10 +183,11 @@ async def google_auth(body: GoogleAuthRequest, db=Depends(get_database)):
     if not email:
         raise HTTPException(status_code=400, detail="Email not available from Google")
 
-    # Find or create user
     user = await db["users"].find_one({"email": email})
+    is_new_user = False  # ← track if this is a signup
 
     if not user:
+        is_new_user = True  # ← new user!
         user_doc = {
             "first_name": google_data.get("given_name", ""),
             "last_name": google_data.get("family_name", ""),
@@ -169,8 +206,48 @@ async def google_auth(body: GoogleAuthRequest, db=Depends(get_database)):
         user = user_doc
 
     tokens = make_tokens(str(user["_id"]), user["role"])
-    return TokenResponse(**tokens, user=format_user(user))
 
+    # ── Send welcome email for new signups only ──────────────────────────────
+    if is_new_user:
+        try:
+            resend.Emails.send({
+                "from": "EduCraft <onboarding@resend.dev>",
+                "to": [email],
+                "subject": "Welcome to EduCraft! 🎉",
+                "html": f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #6366F1;">Welcome to EduCraft! 🎉</h2>
+                    <p>Hi {google_data.get('given_name', 'there')},</p>
+                    <p>We're so excited to have you join EduCraft! Your account has been successfully
+                    created using your Google account.</p>
+                    <p><strong>Email:</strong> {email}</p>
+                    <br>
+                    <p>Here's what you can do next:</p>
+                    <ul>
+                        <li>🎓 Browse and enroll in courses</li>
+                        <li>📝 Take tests and track your progress</li>
+                        <li>📊 Access your personal dashboard</li>
+                    </ul>
+                    <br>
+                    <a href="{settings.FRONTEND_URL}"
+                       style="background-color: #6366F1; color: white; padding: 12px 24px;
+                              text-decoration: none; border-radius: 6px; display: inline-block;">
+                        Start Learning →
+                    </a>
+                    <br><br>
+                    <p>Happy Learning! 🚀</p>
+                    <p><strong>Team EduCraft</strong></p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin-top: 30px;">
+                    <p style="color: #999; font-size: 12px;">
+                        You're receiving this because you just signed up at EduCraft.
+                    </p>
+                </div>
+                """
+            })
+        except Exception as e:
+            print(f"[EMAIL ERROR] Welcome email failed: {e}")
+
+    return TokenResponse(**tokens, user=format_user(user))
 
 # ─────────────────────────────────────────
 # REFRESH TOKEN

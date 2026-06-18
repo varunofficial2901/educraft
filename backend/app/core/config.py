@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
+    # Resend
+    RESEND_API_KEY: Optional[str] = "" # ← add this
+
     # App
     FRONTEND_URL: str = "http://localhost:3000"
     ENVIRONMENT: str = "development"

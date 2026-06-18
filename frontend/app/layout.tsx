@@ -1,8 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import NavigationWrapper from "@/components/NavigationWrapper";
 import InitialLoader from "@/components/InitialLoader";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CartProvider } from "@/components/CartContext";
@@ -41,11 +40,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <InitialLoader />
-            <Navigation />
-            <main className="flex-grow">
+            <NavigationWrapper>
               {children}
-            </main>
-            <Footer />
+            </NavigationWrapper>
           </ThemeProvider>
         </CartProvider>
       </body>
