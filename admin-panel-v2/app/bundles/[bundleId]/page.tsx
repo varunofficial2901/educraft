@@ -157,6 +157,80 @@ function CSVUploadModal({ subjectId, onSuccess, onClose }: {
   );
 }
 
+// ─── Writing Test Modal ───────────────────────────────────────────────────────
+function WritingTestModal({ subjectId, onSuccess, onClose }: {
+  subjectId: string;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle]       = useState('');
+  const [duration, setDuration] = useState('30');
+  const [isFree, setIsFree]     = useState(false);
+  const [prompt, setPrompt]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const { toasts, add: toast }  = useToast();
+
+  const handleUpload = async () => {
+    if (!title.trim() || !prompt.trim()) return;
+    setLoading(true);
+    try {
+      await api.post(`/api/admin/subjects/${subjectId}/tests/writing`, {
+        title,
+        duration: parseInt(duration),
+        is_free: isFree,
+        prompt,
+      });
+      toast('Writing test created');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      toast(getErrorMsg(err), 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Input label="Test Title *" value={title} onChange={setTitle} placeholder="e.g. Creative Writing Test 1" required />
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Duration (min)" type="number" value={duration} onChange={setDuration} />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Type</label>
+          <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-xl border text-sm"
+            style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={isFree} onChange={e => setIsFree(e.target.checked)} className="accent-[var(--accent)]" />
+            Free Test
+          </label>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          Writing Prompt *
+        </label>
+        <textarea
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          placeholder="e.g. One morning, you receive a message from a phone number that does not exist. Write a story about what happens next."
+          rows={5}
+          className="px-3 py-2.5 rounded-xl text-sm border outline-none resize-y"
+          style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
+        />
+      </div>
+
+      <div className="flex gap-2 justify-end pt-2">
+        <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+        <Btn onClick={handleUpload} loading={loading} disabled={!title.trim() || !prompt.trim()}>
+          Create Writing Test
+        </Btn>
+      </div>
+      <Toast toasts={toasts} />
+    </div>
+  );
+}
+
+
 // ─── Subject Card ─────────────────────────────────────────────────────────────
 function SubjectCard({ subject, bundleId, onDelete, onRefresh }: {
   subject: Subject;
@@ -166,6 +240,8 @@ function SubjectCard({ subject, bundleId, onDelete, onRefresh }: {
 }) {
   const [expanded, setExpanded]       = useState(false);
   const [csvModal, setCsvModal]       = useState(false);
+  const [writingModal, setWritingModal] = useState(false);
+  const isWritingSubject = subject.name.toUpperCase().includes('WRITING');
   const [confirmDel, setConfirmDel]   = useState<string | null>(null);
   const [confirmDelSubject, setConfirmDelSubject] = useState(false);
   const { toasts, add: toast }        = useToast();
@@ -220,7 +296,11 @@ function SubjectCard({ subject, bundleId, onDelete, onRefresh }: {
         <div className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Tests</p>
-            <Btn size="sm" onClick={() => setCsvModal(true)}><Upload size={12} /> Upload CSV</Btn>
+            {isWritingSubject ? (
+              <Btn size="sm" onClick={() => setWritingModal(true)}><Plus size={12} /> Add Writing Prompt</Btn>
+            ) : (
+              <Btn size="sm" onClick={() => setCsvModal(true)}><Upload size={12} /> Upload CSV</Btn>
+            )}
           </div>
 
           {testsLoading ? <Spinner center /> : tests.length === 0 ? (
@@ -252,6 +332,9 @@ function SubjectCard({ subject, bundleId, onDelete, onRefresh }: {
       {/* CSV Upload Modal */}
       <Modal open={csvModal} onClose={() => setCsvModal(false)} title={`Upload Test — ${subject.name}`} maxWidth={560}>
         <CSVUploadModal subjectId={subject._id} onSuccess={() => { refetchTests(); onRefresh(); }} onClose={() => setCsvModal(false)} />
+      </Modal>
+      <Modal open={writingModal} onClose={() => setWritingModal(false)} title={`Add Writing Test — ${subject.name}`} maxWidth={560}>
+        <WritingTestModal subjectId={subject._id} onSuccess={() => { refetchTests(); onRefresh(); }} onClose={() => setWritingModal(false)} />          
       </Modal>
 
       {/* Delete Subject Confirm */}

@@ -156,12 +156,15 @@ async def validate_coupon(body: dict, db=Depends(get_database)):
     if not c.get("is_active", True):
         raise HTTPException(status_code=400, detail="Coupon is no longer active")
 
+
     # Check expiry
     if c.get("expiry_date"):
-        from datetime import datetime
         expiry = c["expiry_date"]
         if isinstance(expiry, str):
             expiry = datetime.fromisoformat(expiry)
+        # Make timezone-aware if it's naive
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
         if datetime.now(timezone.utc) > expiry:
             raise HTTPException(status_code=400, detail="Coupon has expired")
 
@@ -177,6 +180,15 @@ async def validate_coupon(body: dict, db=Depends(get_database)):
             "discount_value": c.get("discount_value", 0),
         }
     }
+
+@router.post("/coupons/use")
+async def use_coupon(body: dict, db=Depends(get_database)):
+    code = body.get("code", "").strip().upper()
+    await db["coupons"].update_one(
+        {"code": code},
+        {"$inc": {"used_count": 1}}
+    )
+    return {"message": "ok"}
 
 
 

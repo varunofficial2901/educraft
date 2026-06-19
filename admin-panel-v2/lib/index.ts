@@ -13,5 +13,3 @@ export type { Test, Question } from './endpoints/tests';
 export { studentsApi, enrollmentsApi, messagesApi, analyticsApi, settingsApi } from './endpoints/others';
 export type { Student, Enrollment, PaymentStatus, Message } from './endpoints/others';
 
-export { couponsApi } from './endpoints/coupons';
-export type { Coupon } from './endpoints/coupons';

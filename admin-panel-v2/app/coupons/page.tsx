@@ -1,36 +1,35 @@
 'use client';
 import { useState } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
-import { Card, Btn, Badge, Modal, Input, Confirm, Empty, Spinner, useToast, Toast } from '@/components/ui';
+import { Card, Btn, Badge, Modal, Confirm, Empty, Spinner, useToast, Toast } from '@/components/ui';
 import { Tag, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useApi, useMutation } from '@/lib';
-import { couponsApi } from '../../lib/endpoints/coupons';
-import type { Coupon } from '../../lib/endpoints/coupons';
-
+import { couponsApi } from '@/lib/endpoints/coupons';
+import type { Coupon } from '@/lib/endpoints/coupons';
 
 // ─── Coupon Form ──────────────────────────────────────────────────────────────
-function CouponForm({ onSave, onClose, loading }: any) {
-  const [form, setForm] = useState({
-    code: '',
-    discount_type: 'percent',
-    discount_value: '',
-    max_uses: '0',
-    expiry_date: '',
-    is_active: true,
-  });
+function CouponForm({ onSave, onClose, loading }: {
+  onSave: (data: any) => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  const [code, setCode]                 = useState('');
+  const [discountType, setDiscountType] = useState('percent');
+  const [discountValue, setDiscountValue] = useState('');
+  const [maxUses, setMaxUses]           = useState('0');
+  const [expiryDate, setExpiryDate]     = useState('');
+  const [isActive, setIsActive]         = useState(true);
 
-  const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSave = () => {
-    if (!form.code.trim()) return;
-    if (!form.discount_value || parseFloat(form.discount_value) <= 0) return;
+  const handleSubmit = () => {
+    const val = parseFloat(discountValue);
+    if (!code.trim() || isNaN(val) || val <= 0) return;
     onSave({
-      code:           form.code.trim().toUpperCase(),
-      discount_type:  form.discount_type,
-      discount_value: parseFloat(form.discount_value),
-      max_uses:       parseInt(form.max_uses) || 0,
-      expiry_date:    form.expiry_date || null,
-      is_active:      form.is_active,
+        code:           code.trim().toUpperCase(),
+        discount_type:  discountType,
+        discount_value: val,
+        max_uses:       parseInt(maxUses) || 0,
+        expiry_date:    expiryDate ? `${expiryDate}T23:59:59` : null,
+        is_active:      isActive,
     });
   };
 
@@ -42,8 +41,8 @@ function CouponForm({ onSave, onClose, loading }: any) {
           Coupon Code *
         </label>
         <input
-          value={form.code}
-          onChange={e => set('code', e.target.value.toUpperCase())}
+          value={code}
+          onChange={e => setCode(e.target.value.toUpperCase())}
           placeholder="e.g. WELCOME15"
           className="px-3 py-2.5 rounded-xl text-sm border outline-none font-mono font-bold tracking-widest"
           style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
@@ -57,8 +56,8 @@ function CouponForm({ onSave, onClose, loading }: any) {
             Discount Type *
           </label>
           <select
-            value={form.discount_type}
-            onChange={e => set('discount_type', e.target.value)}
+            value={discountType}
+            onChange={e => setDiscountType(e.target.value)}
             className="px-3 py-2.5 rounded-xl text-sm border outline-none"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
           >
@@ -72,51 +71,54 @@ function CouponForm({ onSave, onClose, loading }: any) {
           </label>
           <input
             type="number"
-            value={form.discount_value}
-            onChange={e => set('discount_value', e.target.value)}
-            placeholder={form.discount_type === 'percent' ? 'e.g. 15' : 'e.g. 10'}
+            min="0"
+            value={discountValue}
+            onChange={e => setDiscountValue(e.target.value)}
+            placeholder={discountType === 'percent' ? 'e.g. 15' : 'e.g. 10'}
             className="px-3 py-2.5 rounded-xl text-sm border outline-none"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
           />
         </div>
       </div>
 
-      {/* Max Uses + Expiry */}
+      {/* Max Uses */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Max Uses (0 = unlimited)
-          </label>
-          <input
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Max Uses (0 = unlimited)
+            </label>
+            <input
             type="number"
-            value={form.max_uses}
-            onChange={e => set('max_uses', e.target.value)}
+            min="0"
+            value={maxUses}
+            onChange={e => setMaxUses(e.target.value)}
             placeholder="0"
             className="px-3 py-2.5 rounded-xl text-sm border outline-none"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-          />
+            />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Expiry Date (optional)
-          </label>
-          <input
+            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Expiry Date (optional)
+            </label>
+            <input
             type="date"
-            value={form.expiry_date}
-            onChange={e => set('expiry_date', e.target.value)}
+            value={expiryDate}
+            onChange={e => setExpiryDate(e.target.value)}
+            min={new Date().toISOString().split('T')[0]}
             className="px-3 py-2.5 rounded-xl text-sm border outline-none"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}
-          />
+            />
         </div>
-      </div>
+        </div>
 
       {/* Active toggle */}
       <label className="flex items-center gap-2 cursor-pointer px-3 py-2.5 rounded-xl border text-sm"
         style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
         <input
           type="checkbox"
-          checked={form.is_active}
-          onChange={e => set('is_active', e.target.checked)}
+          checked={isActive}
+          onChange={e => setIsActive(e.target.checked)}
           className="accent-[var(--accent)]"
         />
         Active (students can use this coupon)
@@ -124,7 +126,7 @@ function CouponForm({ onSave, onClose, loading }: any) {
 
       <div className="flex gap-2 justify-end pt-2">
         <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn onClick={handleSave} loading={loading}>Create Coupon</Btn>
+        <Btn onClick={handleSubmit} loading={loading}>Create Coupon</Btn>
       </div>
     </div>
   );
@@ -133,10 +135,9 @@ function CouponForm({ onSave, onClose, loading }: any) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CouponsPage() {
   const { data: coupons, loading, refetch } = useApi(() => couponsApi.list());
-  
-  const { mutate: createCoupon, loading: creating } = useMutation((body: any) => couponsApi.create(body));
-  const { mutate: toggleCoupon } = useMutation((id: string) => couponsApi.toggle(id));
-  const { mutate: deleteCoupon } = useMutation((id: string) => couponsApi.delete(id));
+  const { mutate: createCoupon, loading: creating } = useMutation(couponsApi.create);
+  const { mutate: toggleCoupon } = useMutation(couponsApi.toggle);
+  const { mutate: deleteCoupon } = useMutation(couponsApi.delete);
 
   const [modal, setModal]           = useState(false);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
@@ -149,7 +150,7 @@ export default function CouponsPage() {
       setModal(false);
       refetch();
     } else {
-      toast('Failed to create coupon — code may already exist', 'danger');
+      toast('Failed to create coupon', 'danger');
     }
   };
 
@@ -167,7 +168,7 @@ export default function CouponsPage() {
     refetch();
   };
 
-  const couponList: Coupon[] = coupons?.data || [];
+  const couponList: Coupon[] = coupons || [];
 
   return (
     <AdminLayout title="Coupons">
@@ -238,8 +239,8 @@ export default function CouponsPage() {
                       {/* Expiry */}
                       <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>
                         {c.expiry_date
-                          ? new Date(c.expiry_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : 'No expiry'}
+                        ? new Date(c.expiry_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : 'No expiry'}
                       </td>
 
                       {/* Status */}

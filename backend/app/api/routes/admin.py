@@ -797,6 +797,179 @@ async def list_subject_tests(subject_id: str, admin=Depends(get_current_admin), 
         ]
     }
 
+# ═════════════════════════════════════════════════════════════════════════════
+# TESTS by SUBJECT  —  /api/admin/subjects/{subject_id}/tests
+# ═════════════════════════════════════════════════════════════════════════════
+
+@router.get("/subjects/{subject_id}/tests")
+async def list_subject_tests(subject_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    tests = await db["tests"].find({"subject_id": subject_id}).sort("created_at", 1).to_list(100)
+    return {
+        "data": [
+            {
+                "_id":            str(t["_id"]),
+                "title":          t.get("title", ""),
+                "subject_id":     t.get("subject_id", ""),
+                "bundle_id":      t.get("bundle_id", ""),
+                "duration":       t.get("duration_minutes", 40),
+                "is_free":        t.get("is_free", False),
+                "type":           t.get("type", "mcq"),   # ← include type
+                "question_count": len(t.get("questions", [])),
+                "created_at":     t.get("created_at"),
+            }
+            for t in tests
+        ]
+    }
+
+
+@router.post("/subjects/{subject_id}/tests")
+async def create_subject_test(subject_id: str, body: dict, admin=Depends(get_current_admin), db=Depends(get_database)):
+    """Subject ke andar test create karo — MCQ ya Writing"""
+    s = await db["subjects"].find_one({"_id": oid(subject_id)})
+    if not s:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    test_type = body.get("type", "mcq")  # "mcq" or "writing"
+
+    questions = []
+    if test_type == "writing":
+        # Writing test — single prompt stored as one question
+        questions.append({
+            "id":   str(ObjectId()),
+            "text": body.get("prompt", "").strip(),
+        })
+    else:
+        # MCQ test — normal questions with options
+        for q in body.get("questions", []):
+            questions.append({
+                "id":          str(ObjectId()),
+                "text":        q.get("text", ""),
+                "options":     q.get("options", []),
+                "correct":     q.get("correct", "0"),
+                "explanation": q.get("explanation", ""),
+            })
+
+    doc = {
+        "title":            body.get("title", "").strip(),
+        "type":             test_type,            # ← save type to MongoDB
+        "subject_id":       subject_id,
+        "bundle_id":        s.get("bundle_id", ""),
+        "duration_minutes": int(body.get("duration", 40)),
+        "is_free":          bool(body.get("is_free", False)),
+        "questions":        questions,
+        "created_at":       datetime.now(timezone.utc),
+    }
+    result = await db["tests"].insert_one(doc)
+    return {"data": {**doc, "_id": str(result.inserted_id)}}
+
+
+@router.post("/subjects/{subject_id}/tests/upload-csv")
+async def upload_subject_test_csv(
+    subject_id: str,
+    title:    str = Form(...),
+    duration: int = Form(40),
+    is_free:  str = Form("false"),
+    file: UploadFile = File(...),
+    admin=Depends(get_current_admin),
+    db=Depends(get_database),
+):
+    s = await db["subjects"].find_one({"_id": oid(subject_id)})
+    if not s:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    content = await file.read()
+    text    = content.decode("utf-8-sig")
+    reader  = csv.DictReader(io.StringIO(text))
+
+    letter_map = {"A": "0", "B": "1", "C": "2", "D": "3",
+                  "a": "0", "b": "1", "c": "2", "d": "3"}
+    questions = []
+    errors    = []
+
+    for i, row in enumerate(reader, start=2):
+        q_text      = row.get("question", "").strip()
+        a           = row.get("optionA", row.get("option_a", "")).strip()
+        b           = row.get("optionB", row.get("option_b", "")).strip()
+        c           = row.get("optionC", row.get("option_c", "")).strip()
+        d           = row.get("optionD", row.get("option_d", "")).strip()
+        correct_raw = row.get("correct", "").strip()
+
+        if not all([q_text, a, b, c, d]):
+            errors.append(f"Row {i}: missing fields")
+            continue
+        if correct_raw not in letter_map:
+            errors.append(f"Row {i}: correct must be A/B/C/D")
+            continue
+
+        questions.append({
+            "id":          str(ObjectId()),
+            "text":        q_text,
+            "options":     [a, b, c, d],
+            "correct":     letter_map[correct_raw],
+            "explanation": row.get("explanation", "").strip(),
+        })
+
+    if not questions:
+        raise HTTPException(status_code=400, detail=f"No valid questions. Errors: {errors[:3]}")
+
+    doc = {
+        "title":            title.strip(),
+        "type":             "mcq",               # CSV upload is always MCQ
+        "subject_id":       subject_id,
+        "bundle_id":        s.get("bundle_id", ""),
+        "duration_minutes": duration,
+        "is_free":          is_free.lower() == "true",
+        "questions":        questions,
+        "created_at":       datetime.now(timezone.utc),
+    }
+    result = await db["tests"].insert_one(doc)
+    return {"data": {**doc, "_id": str(result.inserted_id), "question_count": len(questions)}}
+
+@router.post("/subjects/{subject_id}/tests/writing")
+async def create_writing_test(
+    subject_id: str,
+    body: dict,
+    admin=Depends(get_current_admin),
+    db=Depends(get_database),
+):
+    """Writing skill test create karo — single prompt, no MCQ options"""
+    s = await db["subjects"].find_one({"_id": oid(subject_id)})
+    if not s:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    prompt = body.get("prompt", "").strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Writing prompt required")
+
+    doc = {
+        "title":            body.get("title", "").strip(),
+        "type":             "writing",
+        "subject_id":       subject_id,
+        "bundle_id":        s.get("bundle_id", ""),
+        "duration_minutes": int(body.get("duration", 30)),
+        "is_free":          bool(body.get("is_free", False)),
+        "questions": [
+            {
+                "id":      str(ObjectId()),
+                "text":    prompt,
+                "options": [],
+                "correct": "",
+            }
+        ],
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = await db["tests"].insert_one(doc)
+    return {"data": {**doc, "_id": str(result.inserted_id), "question_count": 1}}
+
+
+@router.delete("/subjects/{subject_id}/tests/{test_id}")
+async def delete_subject_test(subject_id: str, test_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
+    result = await db["tests"].delete_one({"_id": oid(test_id), "subject_id": subject_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Test not found")
+    return {"message": "Test deleted"}
+
+
 
 @router.post("/subjects/{subject_id}/tests")
 async def create_subject_test(subject_id: str, body: dict, admin=Depends(get_current_admin), db=Depends(get_database)):
@@ -902,6 +1075,8 @@ async def upload_subject_test_csv(
     return {"data": {**doc, "_id": str(result.inserted_id), "question_count": len(questions)}}
 
 
+
+
 @router.delete("/subjects/{subject_id}/tests/{test_id}")
 async def delete_subject_test(subject_id: str, test_id: str, admin=Depends(get_current_admin), db=Depends(get_database)):
     result = await db["tests"].delete_one({"_id": oid(test_id), "subject_id": subject_id})
@@ -936,6 +1111,7 @@ async def list_coupons(admin=Depends(get_current_admin), db=Depends(get_database
 
 @router.post("/coupons")
 async def create_coupon(body: dict, admin=Depends(get_current_admin), db=Depends(get_database)):
+    print(f"[DEBUG] Create coupon called with: {body}")  # ← ADD THIS
     code = body.get("code", "").strip().upper()
     if not code:
         raise HTTPException(status_code=400, detail="Coupon code required")
